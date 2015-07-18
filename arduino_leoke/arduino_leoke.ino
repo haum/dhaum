@@ -3,6 +3,8 @@
 #define PADBIT(PAD) (1 << (PAD-1))
 #define PADSNB (sizeof(L)/sizeof(*L))
 
+#define DEBUG_RAW_CODE 0
+
 typedef enum {
   UNTOUCHED, // Not touched at all
   TOUCHED, // Touched this loop
@@ -55,7 +57,7 @@ void loop() {
     }
 
     // Debug show multi presses
-    if (active != pushed) {
+    if (active != pushed && DEBUG_RAW_CODE) {
       Serial.print("Code : ");
       Serial.println(pushed, HEX);
     }
@@ -92,7 +94,8 @@ void loop() {
   }
 
   // Debug separator
-  Serial.println("==");
+  if (DEBUG_RAW_CODE)
+    Serial.println("==");
 
   // Debounce
   delay(100);
