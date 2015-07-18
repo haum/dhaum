@@ -16,12 +16,15 @@ struct binder_s {
   uint32_t mask;
 
   touchstatus_e touched;
+  char debounce;
+  touchstatus_e touched_filtered;
 } binders[] = {
   { PADBIT(1) | PADBIT(2), 0xffffffff, },
   { PADBIT(5) | PADBIT(6), 0xffffffff, },
 };
 
 #define BINDERNB (sizeof(binders)/sizeof(*binders))
+#define MAXDEBOUNCE 5
 
 void setup() {
   // All others are input and untouched
@@ -33,6 +36,7 @@ void setup() {
   // Reset binders
   for (int i = 0; i < BINDERNB; ++i) {
     binders[i].touched = UNTOUCHED;
+    binders[i].debounce = 0;
   }
 
   // Services begin
@@ -66,13 +70,8 @@ void loop() {
     for (int j = 0; j < BINDERNB; ++j) {
       binder_s & binder = binders[j];
       touchstatus_e touched = ((binder.bits & binder.mask) == (pushed & binder.mask)) ? TOUCHED : UNTOUCHED;
-      if (touched == TOUCHED) {
-        if (binder.touched == UNTOUCHED) {
-          Serial.print("On ");
-          Serial.println(binder.bits, HEX);
-        }
+      if (touched == TOUCHED)
         binder.touched = TOUCHED;
-      }
     }
 
     // Deactivate ith pad
@@ -80,17 +79,30 @@ void loop() {
     active <<= 1;
   }
 
-  // Detect untouch events
+  // Detect untouch events + debounce
   for (int j = 0; j < BINDERNB; ++j) {
     binder_s & binder = binders[j];
     if (binder.touched == LASTTOUCHED) {
-      Serial.print("Off ");
-      Serial.println(binder.bits, HEX);
       binder.touched = UNTOUCHED;
 
     } else if (binder.touched == TOUCHED) {
       binder.touched = LASTTOUCHED;
     }
+
+    binder.debounce += (binder.touched == UNTOUCHED) ? -1 : 1;
+    if (binder.debounce > MAXDEBOUNCE)
+      binder.debounce = MAXDEBOUNCE;
+    if (binder.debounce < 0)
+      binder.debounce = 0;
+      if (binder.debounce == MAXDEBOUNCE && binder.touched_filtered == UNTOUCHED) {
+        Serial.print("On ");
+        Serial.println(binder.bits, HEX);
+        binder.touched_filtered = LASTTOUCHED;
+      } else if (binder.debounce == 0 && binder.touched_filtered != UNTOUCHED) {
+        Serial.print("Off ");
+        Serial.println(binder.bits, HEX);
+        binder.touched_filtered = UNTOUCHED;
+      }
   }
 
   // Debug separator
@@ -98,6 +110,6 @@ void loop() {
     Serial.println("==");
 
   // Debounce
-  delay(100);
+  delay(5);
 }
 
