@@ -1,29 +1,8 @@
-/* To be used with Léoké */
-
-#define PADBIT(PAD) (1 << (PAD-1))
-#define PADSNB (sizeof(L)/sizeof(*L))
+#include "dhaum.h"
 
 #define DEBUG_RAW_CODE 0
-
-typedef enum {
-  UNTOUCHED, // Not touched at all
-  TOUCHED, // Touched this loop
-  LASTTOUCHED, // Touched last loop
-} touchstatus_e;
-
-struct binder_s {
-  uint32_t bits;
-  uint32_t mask;
-
-  touchstatus_e touched;
-  char debounce;
-  touchstatus_e touched_filtered;
-} binders[] = {
-  { PADBIT(1) | PADBIT(2), 0xffffffff, },
-  { PADBIT(5) | PADBIT(6), 0xffffffff, },
-};
-
-#define BINDERNB (sizeof(binders)/sizeof(*binders))
+#define PADSNB (sizeof(L)/sizeof(*L))
+#define BINDERNB (binders_size)
 #define MAXDEBOUNCE 5
 
 void setup() {
@@ -68,7 +47,7 @@ void loop() {
 
     // Detect touch events
     for (int j = 0; j < BINDERNB; ++j) {
-      binder_s & binder = binders[j];
+      DhaumBinder & binder = binders[j];
       touchstatus_e touched = ((binder.bits & binder.mask) == (pushed & binder.mask)) ? TOUCHED : UNTOUCHED;
       if (touched == TOUCHED)
         binder.touched = TOUCHED;
@@ -81,7 +60,7 @@ void loop() {
 
   // Detect untouch events + debounce
   for (int j = 0; j < BINDERNB; ++j) {
-    binder_s & binder = binders[j];
+    DhaumBinder & binder = binders[j];
     if (binder.touched == LASTTOUCHED) {
       binder.touched = UNTOUCHED;
 
