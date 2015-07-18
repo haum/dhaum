@@ -1,12 +1,12 @@
 /* To be used with Léoké */
 
-#define KEYSNB (sizeof(L)/sizeof(*L))
-
-#define PADBIT(PAD) (1 << PAD)
+#define PADBIT(PAD) (1 << (PAD-1))
+#define PADSNB (sizeof(L)/sizeof(*L))
 
 typedef enum {
-  UNTOUCHED,
-  TOUCHED,
+  UNTOUCHED, // Not touched at all
+  TOUCHED, // Touched this loop
+  LASTTOUCHED, // Touched last loop
 } touchstatus_e;
 
 struct binder_s {
@@ -15,15 +15,15 @@ struct binder_s {
 
   touchstatus_e touched;
 } binders[] = {
-  { PADBIT(1) | PADBIT(2), 0xffffffff, UNTOUCHED },
-  { PADBIT(5) | PADBIT(6), 0xffffffff, UNTOUCHED },
+  { PADBIT(1) | PADBIT(2), 0xffffffff, },
+  { PADBIT(5) | PADBIT(6), 0xffffffff, },
 };
 
 #define BINDERNB (sizeof(binders)/sizeof(*binders))
 
 void setup() {
   // All others are input and untouched
-  for (int i = 0; i < KEYSNB; ++i) {
+  for (int i = 0; i < PADSNB; ++i) {
     pinMode(L[i], INPUT);
     digitalWrite(L[i], LOW);
   }
@@ -39,37 +39,62 @@ void setup() {
 
 void loop() {
   // For each key
-  uint32_t active = 1;
-  for (int i = 1; i < KEYSNB; ++i) {
-    uint32_t pushed = active;
-    uint32_t bitj = active;
+  uint32_t active = 1; // Current bit operated
+  for (int i = 1; i < PADSNB; ++i) {
+    uint32_t pushed = active; // Bitfield of pressed pads
+    uint32_t bitj = active; // Current bit in inner loop
+
+    // Activate ith pad
     pinMode(L[i], OUTPUT);
-    for (int j = i + 1; j < KEYSNB; ++j) {
+
+    // Detect active pads
+    for (int j = i + 1; j < PADSNB; ++j) {
       bitj <<= 1;
-      int sensorValue = digitalRead(L[j]);
-      if (!sensorValue)
+      if (!digitalRead(L[j]))
         pushed |= bitj ;
     }
+
+    // Debug show multi presses
     if (active != pushed) {
       Serial.print("Code : ");
       Serial.println(pushed, HEX);
     }
+
+    // Detect touch events
     for (int j = 0; j < BINDERNB; ++j) {
       binder_s & binder = binders[j];
-      touchstatus_e touched = (binder.bits & binder.mask == pushed & binder.mask) ? TOUCHED : UNTOUCHED;
-      if (touched && binder.touched == UNTOUCHED) {
-        Serial.print("On ");
-        Serial.println(pushed, HEX);
-
-      } else if (!touched && binder.touched == TOUCHED) {
-        Serial.print("Off ");
-        Serial.println(pushed, HEX);
+      touchstatus_e touched = ((binder.bits & binder.mask) == (pushed & binder.mask)) ? TOUCHED : UNTOUCHED;
+      if (touched == TOUCHED) {
+        if (binder.touched == UNTOUCHED) {
+          Serial.print("On ");
+          Serial.println(binder.bits, HEX);
+        }
+        binder.touched = TOUCHED;
       }
-      binder.touched = touched;
     }
-    active <<= 1;
+
+    // Deactivate ith pad
     pinMode(L[i], INPUT);
+    active <<= 1;
   }
+
+  // Detect untouch events
+  for (int j = 0; j < BINDERNB; ++j) {
+    binder_s & binder = binders[j];
+    if (binder.touched == LASTTOUCHED) {
+      Serial.print("Off ");
+      Serial.println(binder.bits, HEX);
+      binder.touched = UNTOUCHED;
+
+    } else if (binder.touched == TOUCHED) {
+      binder.touched = LASTTOUCHED;
+    }
+  }
+
+  // Debug separator
+  Serial.println("==");
+
+  // Debounce
   delay(100);
 }
 
