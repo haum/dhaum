@@ -1,6 +1,7 @@
 #include "dhaum.h"
 
 #define DEBUG_RAW_CODE 0
+#define DEBUG_FILTERED_TOUCHES 0
 #define PADSNB (sizeof(L)/sizeof(*L))
 #define BINDERNB (binders_size)
 #define MAXDEBOUNCE 5
@@ -74,12 +75,18 @@ void loop() {
     if (binder.debounce < 0)
       binder.debounce = 0;
       if (binder.debounce == MAXDEBOUNCE && binder.touched_filtered == UNTOUCHED) {
-        Serial.print("On ");
-        Serial.println(binder.bits, HEX);
+        if (DEBUG_FILTERED_TOUCHES) {
+          Serial.print("On ");
+          Serial.println(binder.bits, HEX);
+        }
+        MIDIUSB.note(1, binder.midi.note, binder.midi.octave, binder.midi.channel, binder.midi.velocity);
         binder.touched_filtered = LASTTOUCHED;
       } else if (binder.debounce == 0 && binder.touched_filtered != UNTOUCHED) {
-        Serial.print("Off ");
-        Serial.println(binder.bits, HEX);
+        if (DEBUG_FILTERED_TOUCHES) {
+          Serial.print("Off ");
+          Serial.println(binder.bits, HEX);
+        }
+        MIDIUSB.note(0, binder.midi.note, binder.midi.octave, binder.midi.channel, binder.midi.velocity);
         binder.touched_filtered = UNTOUCHED;
       }
   }
@@ -90,5 +97,8 @@ void loop() {
 
   // Debounce
   delay(5);
+
+  // Midi go
+  MIDIUSB.flush();
 }
 

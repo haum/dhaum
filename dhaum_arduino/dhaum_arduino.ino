@@ -2,15 +2,31 @@
 
 // Objects
 static DhaumObject casserole(1);
-static DhaumObject bouquet(2);
+static DhaumObject pelote(2);
 static DhaumObject chat(6);
+
+// Sounds
+static DhaumMidi ronronnement(MidiNote_C);
+static DhaumMidi coup_de_casserole(MidiNote_D);
+static DhaumMidi nyan(MidiNote_E);
 
 // Binders
 DhaumBinder binders_data[] = {
 
-  DhaumBinder(chat | bouquet),
-  DhaumBinder(casserole | chat),
-  DhaumBinder(casserole | chat | bouquet),
+  DhaumBinder(
+    chat | pelote,
+    ronronnement
+  ),
+
+  DhaumBinder(
+    casserole | chat,
+    coup_de_casserole
+  ),
+
+  DhaumBinder(
+    casserole | chat | pelote,
+    nyan
+   ),
 
 };
 
