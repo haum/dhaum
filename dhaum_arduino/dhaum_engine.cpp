@@ -109,7 +109,7 @@ void loop() {
 
   // Wait for next loop
   while(loop_rdv > millis());
-  loop_rdv = millis() + 30;
+  loop_rdv = millis() + 10;
 
   // Flushes
   MIDIUSB.flush();
