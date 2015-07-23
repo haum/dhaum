@@ -64,7 +64,9 @@ void loop() {
     // Get snapshot of pads (with ith activated) and update binders' status
     pinMode(L[i], OUTPUT);
     DhaumBits pushed = get_pads_snapshot();
+    digitalWrite(L[i], HIGH);
     pinMode(L[i], INPUT);
+    digitalWrite(L[i], LOW);
     notify_binders(pushed);
     delay(1);
 
@@ -107,7 +109,7 @@ void loop() {
 
   // Wait for next loop
   while(loop_rdv > millis());
-  loop_rdv = millis() + 30;
+  loop_rdv = millis() + 10;
 
   // Flushes
   MIDIUSB.flush();
